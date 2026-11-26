@@ -1,0 +1,19 @@
+node_modules/
+ayush.db
+ayush.db-shm
+ayush.db-wal
+ayush.secret
+storage/
+dist/
+.env
+data/
+*.log
+
+# databases are created inside each service's database/ folder at run time
+*/database/*.db*
+*/*/database/*.db*
+!**/database/.gitkeep
+shared-database-template/*.db
+shared-database-template/**/*.db*
+shared-database-template/**/*.db*
+.env.example

@@ -1,0 +1,11 @@
+AYUSH PROJECT - DATABASE PACKAGE
+
+This package contains all database folders/placeholders from the supplied project, grouped by owning service.
+
+IMPORTANT:
+- The supplied ZIP does not contain populated SQLite .db files; the database folders contain placeholders (.gitkeep).
+- The application creates/opens its SQLite databases at runtime.
+- Table definitions and migrations are embedded in the relevant service backend modules, which are included in the Backend package. They were not duplicated or moved because doing so would break module paths and service startup.
+- Existing database records are not included in this source ZIP and are not changed by this packaging operation.
+
+Database ownership is service-scoped. See each folder name for its owning service. Extract into the project root to restore the original database directory layout.

@@ -1,0 +1,1 @@
+These SQLite files are templates. On first `npm run dev`, scripts/prepare-shared-data.js copies them into the one shared DATA_ROOT only if missing. Existing patient data is never overwritten. Each backend creates its application tables when it starts.

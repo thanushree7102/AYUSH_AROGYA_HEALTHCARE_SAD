@@ -1,0 +1,12 @@
+{
+  "platform.db": "shared_platform",
+  "clinical.db": "common_clinical",
+  "longitudinal.db": "longitudinal_record",
+  "event-bus.db": "event_bus",
+  "ayurveda.db": "ayurveda",
+  "yoga-naturopathy.db": "yoga_naturopathy",
+  "unani.db": "unani",
+  "siddha.db": "siddha",
+  "homoeopathy.db": "homoeopathy",
+  "ai.db": "ai"
+}

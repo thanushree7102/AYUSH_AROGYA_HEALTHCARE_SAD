@@ -1,0 +1,1 @@
+This is an additive PostgreSQL migration foundation. It does not replace the existing SQLite runtime. Read README.md before running migration. Never use production credentials in shared files.

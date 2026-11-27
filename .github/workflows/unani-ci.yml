@@ -1,0 +1,37 @@
+name: Unani CI
+
+on:
+  push:
+    branches:
+      - services/unani
+
+  pull_request:
+    branches:
+      - services/unani
+
+jobs:
+  unani-ci:
+    name: Unani Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Check Syntax
+        run: npm run check
+
+      - name: Run Unani Tests
+        run: npm run test
+
+      - name: Build Unani Frontend
+        run: npm run build:unani

@@ -13,3 +13,7 @@ data/
 */database/*.db*
 */*/database/*.db*
 !**/database/.gitkeep
+shared-database-template/*.db
+shared-database-template/**/*.db*
+shared-database-template/**/*.db*
+.env.example

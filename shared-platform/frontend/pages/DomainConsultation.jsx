@@ -3,13 +3,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate, NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import TopBar from '../components/TopBar';
 import CommonClinical from '@clinical/components/CommonClinical';
+import ConsultationMedicines from '@clinical/components/ConsultationMedicines';
 import FormPage from '../components/FormPage';
 import { forSystem } from '../api/client';
 import { getActivePatient, getSession } from '../utils/session';
 
 export { DOMAINS };
 
-// The Ayurveda consultation screen loads its form definitions from the Ayurveda service.
+// One consultation screen for Yoga & Naturopathy, Unani, Siddha and Homoeopathy.
+// The forms are NOT in this app: they are loaded from that AYUSH service (GET /v1/<system>/forms), so each service owns its own content.
 export default function DomainConsultation() {
   const { system, id } = useParams();
   const nav = useNavigate();
@@ -31,6 +33,7 @@ export default function DomainConsultation() {
           <h2>{DOMAINS[system]}</h2>
           <NavLink to={`${base}/common-clinical`}>Common clinical</NavLink>
           {(defs?.parts || []).map((p, i) => <NavLink key={p.id} to={`${base}/${p.id}`}>{i + 1}. {p.label}</NavLink>)}
+          {defs && <NavLink to={`${base}/medicines`}>{defs.parts.length + 1}. Medicines (Prescription)</NavLink>}
         </aside>
         <main className="main">
           <div className="header">
@@ -42,6 +45,7 @@ export default function DomainConsultation() {
           {defs && (
             <Routes>
               <Route path="common-clinical" element={<CommonClinical healthId={patient.healthId} view="all" />} />
+              <Route path="medicines" element={<ConsultationMedicines healthId={patient.healthId} system={DOMAINS[system]} />} />
               {defs.parts.map((p) => (
                 <Route key={p.id} path={p.id} element={<FormPage key={`${system}:${p.id}`} api={api} title={p.label} endpoint={p.id} fields={p.fields} requiredRole={p.practitionerOnly ? 'practitioner' : undefined} />} />
               ))}

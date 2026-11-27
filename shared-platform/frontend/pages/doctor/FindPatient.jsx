@@ -12,8 +12,7 @@ export default function FindPatient() {
   const [id, setId] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const forcedSystem = import.meta.env.VITE_AYUSH_SYSTEM || '';
-  const [system, setSystem] = useState(forcedSystem || Object.keys(DOMAINS).find((k) => DOMAINS[k] === s?.system) || 'ayurveda');
+  const [system, setSystem] = useState(Object.keys(DOMAINS).find((k) => DOMAINS[k] === s?.system) || 'siddha');
   if (!s || s.role !== 'practitioner') return <Navigate to="/" replace />;
 
   const open = async (e) => {
@@ -25,7 +24,7 @@ export default function FindPatient() {
       sessionStorage.setItem('activePatient', JSON.stringify({
         name: r.data.name, healthId: r.data.healthId, consultationId: r.data.consultationId, extracted: r.data.lastExtracted || null,
       }));
-      nav(system === 'ayurveda' ? `/ayurveda/consultations/${r.data.consultationId}/prakriti-vikriti` : `/${system}/consultations/${r.data.consultationId}/common-clinical`);
+      nav(system === 'siddha' ? `/siddha/consultations/${r.data.consultationId}/mukkutram` : `/${system}/consultations/${r.data.consultationId}/common-clinical`);
     } catch (err) {
       const c = err.response?.status;
       setError(c === 403 ? err.response.data?.message || 'The patient has not shared the record with you.'
@@ -38,7 +37,7 @@ export default function FindPatient() {
       <TopBar />
       <div className="container">
         <div className="card">
-          <div className="row between" style={{alignItems:'center',gap:12,flexWrap:'wrap'}}>
+          <div className="row between" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <h2>Doctor workspace</h2>
             <button type="button" className="secondary" onClick={() => nav('/doctor/appointments')}>View appointment requests</button>
           </div>
@@ -49,10 +48,7 @@ export default function FindPatient() {
             <div className="field"><label htmlFor="hid">Health Record ID</label>
               <input id="hid" inputMode="numeric" placeholder="91-1234-5678-9012" value={id} onChange={(e) => { setId(formatHealthId(e.target.value)); setError(''); }} /></div>
             <div className="field"><label htmlFor="sys">AYUSH system</label>
-              {forcedSystem
-                ? <div className="banner info" id="sys">{DOMAINS[forcedSystem]} service (dedicated frontend)</div>
-                : <select id="sys" value={system} onChange={(e) => setSystem(e.target.value)}>{Object.entries(DOMAINS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>}
-            </div>
+              <select id="sys" value={system} onChange={(e) => setSystem(e.target.value)}>{Object.entries(DOMAINS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
             <button type="submit" disabled={busy}>{busy ? 'Opening...' : 'Open record'}</button>
           </form>
         </div>

@@ -97,7 +97,7 @@ v1.post('/auth/register/practitioner', disk.single('certificate'), face.faceGate
   const f = req.file;
   const name = str(pick(b, 'name', 'fullName'));
   const mobile = str(pick(b, 'mobile', 'phone'));
-  const system = str(pick(b, 'system', 'ayushSystem')) || 'Ayurveda';
+  const system = str(pick(b, 'system', 'ayushSystem')) || 'Siddha';
   const email = str(pick(b, 'email', 'professionalEmail')) && String(pick(b, 'email', 'professionalEmail')).trim().toLowerCase();
   const regNo = str(pick(b, 'registrationNo', 'registrationNumber', 'regNo'));
   const year = str(b.graduationYear); const exp = str(b.experience);

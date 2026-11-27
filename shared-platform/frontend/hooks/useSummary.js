@@ -17,5 +17,7 @@ export default function useSummary(healthId) {
       });
   }, [healthId]);
   useEffect(() => { load(); }, [load]);
-  return { ...state, reload: load };
+  // refresh: fetch again WITHOUT the "Loading..." state, so a panel the user is working in keeps its place
+  const refresh = useCallback(() => platform.get(`/patients/${healthId}/summary`).then((r) => setState({ data: r.data })).catch(() => {}), [healthId]);
+  return { ...state, reload: load, refresh };
 }

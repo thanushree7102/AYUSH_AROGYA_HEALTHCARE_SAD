@@ -7,7 +7,7 @@ import { formatIST } from '../utils/time';
 import { useLang } from '../i18n';
 
 // Generic form: validation, autosave/resume, save confirmation,
-// API failure + retry, access-denied. Reused by every Ayurveda screen.
+// API failure + retry, access-denied. Reused by every Siddha screen.
 export default function FormPage({ title, endpoint, fields, requiredRole, prefill, api = client }) {
   const { t } = useLang();
   const { id } = useParams();
@@ -25,6 +25,8 @@ export default function FormPage({ title, endpoint, fields, requiredRole, prefil
   const [status, setStatus] = useState({ state: 'idle' }); // idle | saving | saved | error | denied
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(null); // { values, at }
+  const [currentVersion, setCurrentVersion] = useState(0);
+  const [versionHistory, setVersionHistory] = useState([]);
   const [editing, setEditing] = useState(true);
   const [pendingDraft, setPendingDraft] = useState(null);
   const idemKey = useRef(crypto.randomUUID());
@@ -34,8 +36,20 @@ export default function FormPage({ title, endpoint, fields, requiredRole, prefil
 
   // Offer to resume an interrupted draft
   useEffect(() => {
-    setValues(base); setSaved(null); setEditing(true); setDirty(false);
+    let cancelled = false;
+    setValues(base); setSaved(null); setEditing(true); setDirty(false); setCurrentVersion(0); setVersionHistory([]);
     setStatus({ state: 'idle' }); setPendingDraft(load());
+    api.get(`/consultations/${id}/${endpoint}`).then((r) => {
+      if (cancelled || !r.data) return;
+      const restored = { ...empty, ...r.data };
+      delete restored._version; delete restored._savedAt;
+      setValues(restored); setSaved({ values: restored, at: r.data._savedAt || new Date().toISOString() });
+      setCurrentVersion(Number(r.data._version || 1)); setEditing(false);
+    }).catch(() => { /* 404 means this form has not been saved yet */ });
+    api.get(`/consultations/${id}/${endpoint}/versions`).then((r) => {
+      if (!cancelled) setVersionHistory(Array.isArray(r.data) ? r.data : []);
+    }).catch(() => {});
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftKey]);
 
@@ -72,12 +86,15 @@ export default function FormPage({ title, endpoint, fields, requiredRole, prefil
 
     setStatus({ state: 'saving' });
     try {
-      await api.post(`/consultations/${id}/${endpoint}`, values, {
+      const response = await api.post(`/consultations/${id}/${endpoint}`, values, {
         headers: { 'Idempotency-Key': idemKey.current }, // safe retries
       });
       clear();
       setDirty(false);
-      setSaved({ values, at: new Date().toISOString() });
+      const at = response.data?.savedAt || new Date().toISOString();
+      const version = Number(response.data?.version || currentVersion + 1 || 1);
+      setSaved({ values, at }); setCurrentVersion(version);
+      setVersionHistory((old) => [{ version, savedBy: response.data?.savedBy || localStorage.getItem('doctorCode') || 'current user', savedRole: role, savedAt: at }, ...old]);
       setEditing(false);
       idemKey.current = crypto.randomUUID();
       setStatus({ state: 'saved' });
@@ -126,9 +143,12 @@ export default function FormPage({ title, endpoint, fields, requiredRole, prefil
               </div>
             ))}
           </dl>
-          <p className="muted">Saved {formatIST(saved.at)}</p>
+          <p className="muted">Saved {formatIST(saved.at)} · Version {currentVersion || 1}</p>
           {/* Correction = new version, never a delete (NFR-DAT-02) */}
           <button type="button" onClick={() => setEditing(true)}>Edit (save as new version)</button>
+          {versionHistory.length > 0 && <details style={{ marginTop: 12 }}><summary>Version history ({versionHistory.length})</summary>
+            {versionHistory.map((v) => <div className="tl" key={v.version}><strong>Version {v.version}</strong> · {formatIST(v.savedAt)} · {v.savedBy || v.savedRole || 'User'}</div>)}
+          </details>}
         </>
       ) : (
         <form onSubmit={submit} noValidate>

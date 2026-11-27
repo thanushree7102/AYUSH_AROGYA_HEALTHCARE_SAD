@@ -1,53 +1,51 @@
-# Ayurveda Healthcare Platform — Ayurveda Only
+# AYUSH Siddha Health Record (standalone)
 
-This package contains the **Ayurveda frontend and its required backend support services only**. Yoga & Naturopathy, Unani, Siddha and Homoeopathy service code and frontends have been removed.
+Siddha doctor workspace + patient app. Runs on its own: it starts the shared identity, clinical, timeline, integrations, event-bus and AI services itself, plus the Siddha domain service and the API gateway.
 
-## Run on Windows CMD
-
-1. Extract the ZIP.
-2. Open CMD inside the `AYUSH-DIGITAL-HEALTH-PLATFORM` folder.
-3. Install dependencies:
+## Run (Windows CMD)
 
 ```cmd
 npm install
-```
-
-4. Create the environment file:
-
-```cmd
 copy .env.example .env
-```
-
-5. Start the Ayurveda frontend and required backend services:
-
-```cmd
 npm run dev
 ```
 
-6. Open **http://localhost:5171**.
+Open **http://localhost:5176**. Gateway: http://127.0.0.1:5400. Keep `AYUSH_SECRET` blank (a secret is created once in `AYUSH_SHARED_DATA`).
 
-## Included services
+Production-style: `npm run build` then `npm start`, and open http://localhost:5400.
 
-- Ayurveda domain service (port 5002)
-- Shared Platform: registration, login, identity and consent (port 5001)
-- Common Clinical: patient encounters, prescriptions and uploads (port 5007)
-- Longitudinal Records: patient timeline and summary (port 5008)
-- Integrations: OCR, voice and translation endpoints (port 5009)
-- Event Bus (port 5010)
-- API Gateway (port 5000)
+## Demo sign-in (OTP is shown by the server, or `OTP_CODE` from `.env`)
 
-These supporting services are retained because the Ayurveda application depends on them. They are not additional AYUSH systems.
+| Role | Mobile |
+|---|---|
+| Siddha doctor | 9000000003 |
+| Clinic | 9000000005 |
+| Auditor / Admin | 9000000008 / 9000000009 |
 
-## Useful commands
+Patients register themselves (OTP + face). The patient must share the record with the doctor (Privacy page) before the doctor can open it.
 
-```cmd
-npm run dev          :: start backend services + Ayurveda frontend
-npm start            :: start backend services only
-npm run dev:ayurveda :: start only the Ayurveda frontend (backend must already be running)
-npm run build        :: build the Ayurveda frontend only
-npm run check        :: check JavaScript syntax
-npm test             :: run the Ayurveda deployment smoke test
-npm run health       :: check required backend services
-```
+## What the Siddha doctor sees
 
-Keep the terminal open while using the application. Press Ctrl+C to stop the processes.
+1. **Mukkutram & Udal Thegi** – Udal Thegi, dominant Mukkutram, Vatham/Pitham/Kabam state (Thannilai / Valarchi / Thaazhchi), Udal Thathukkal
+2. **Envagai Thervu** – presenting complaint, Naadi, Sparisam, Naa, Niram, Mozhi, Vizhi, Malam, Neer Kuri, Nei Kuri
+3. **Noi Naadal** – diagnosis (doctor only)
+4. **Maruthuvam** – Ul Marunthu, Marunthu Vagai, Pura Maruthuvam / Varmam, Pathiyam, Apathiyam, Yogam (doctor only)
+5. **Follow-up**
+6. **Marunthu (Prescription)** – issue/update prescriptions, PDF download
+
+Forms live in `services/siddha-service/backend/server.js`; the screen is `services/siddha-service/frontend/SiddhaDoctorLayout.jsx`. Every save is a new version. Internally the constitution field is still stored in a column named `prakriti`; the UI shows it as Udal Thegi.
+
+## Commands
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | all services + UI |
+| `npm start` | services only (serves a built UI) |
+| `npm test` | end-to-end Siddha test on temporary data |
+| `npm run test:reader` | prescription reader checks |
+| `npm run check` | syntax check |
+| `npm run health` | service health |
+
+Optional: set `ANTHROPIC_API_KEY` in `.env` for handwriting/Tamil prescription reading.
+
+Local demo only: fixed OTP and demo secrets must not be exposed publicly. AI text is informational; a qualified Siddha practitioner makes clinical decisions. See `docs/LIMITATIONS.md`.

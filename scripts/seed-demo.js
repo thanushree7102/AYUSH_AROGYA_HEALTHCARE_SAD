@@ -1,4 +1,4 @@
-// Creates the demo accounts (Ayurveda doctor 9000000001, clinic 9000000005, auditor 9000000008,
+// Creates the demo accounts (Siddha doctor 9000000003, other-system demo doctors 9000000001 / 9000000002 / 9000000004, clinic 9000000005, auditor 9000000008,
 // admin 9000000009) in the Shared Platform database. The Shared Platform also does this on its first start (SEED_DEMO=0 turns it off).
 process.env.SERVICE_NAME = 'platform';
 require('../shared-platform/backend/seed')();

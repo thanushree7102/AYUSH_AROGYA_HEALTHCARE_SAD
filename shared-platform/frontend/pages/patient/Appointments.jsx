@@ -10,7 +10,7 @@ const toIso = (value) => {
 
 export default function Appointments() {
   const session = getSession();
-  const system = DOMAIN_LIST?.[0]?.label || (import.meta.env.VITE_APP_SYSTEM || 'AYUSH');
+  const [system, setSystem] = useState(DOMAIN_LIST?.[0]?.label || 'Siddha');
   const [doctors, setDoctors] = useState([]);
   const [items, setItems] = useState([]);
   const [doctorId, setDoctorId] = useState('');
@@ -24,20 +24,33 @@ export default function Appointments() {
 
   const patientId = session?.healthId || session?.patientId || session?.id;
   const load = async () => {
-    if (!patientId) return;
-    const [appointments, doctorResponse] = await Promise.all([
+    if (!patientId) throw new Error('Patient ID is missing from your session. Please sign in again.');
+    const results = await Promise.allSettled([
       platform.get(`/clinical/patients/${encodeURIComponent(patientId)}/appointments`),
       platform.get('/doctors')
     ]);
-    setItems(Array.isArray(appointments.data) ? appointments.data : (appointments.data?.appointments || []));
-    const available = Array.isArray(doctorResponse.data) ? doctorResponse.data : (doctorResponse.data?.doctors || []);
-    setDoctors(available.filter((doctor) => !doctor.system || doctor.system === system));
+    if (results[0].status === 'fulfilled') {
+      const data = results[0].value.data;
+      setItems(Array.isArray(data) ? data : (data?.appointments || []));
+    } else {
+      const err = results[0].reason;
+      throw new Error(err.response?.data?.message || 'Could not load your appointment history.');
+    }
+    if (results[1].status === 'fulfilled') {
+      const data = results[1].value.data;
+      const available = Array.isArray(data) ? data : (data?.doctors || []);
+      setDoctors(available.filter((doctor) => !doctor.system || String(doctor.system).toLowerCase() === system.toLowerCase()));
+    } else {
+      setDoctors([]);
+      const err = results[1].reason;
+      setError(err.response?.data?.message || 'Your appointment history loaded, but the doctor directory is unavailable.');
+    }
   };
 
   useEffect(() => {
-    load().catch(() => setError('Appointments could not be loaded. Check your login and service connection.'));
+    load().catch((err) => setError(err.message || 'Appointments could not be loaded. Check your login and service connection.'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [system]);
 
   const upcoming = useMemo(() => items.filter((a) => !['Cancelled', 'Completed', 'No-show'].includes(a.status)), [items]);
   const book = async (event) => {
@@ -74,17 +87,17 @@ export default function Appointments() {
   return (
     <section className="card">
       <h2>Appointments</h2>
-      <p className="muted">Book and manage your {system} consultations. Your appointment is linked to your AYUSH patient identity.</p>
+      <p className="muted">Book and manage your {system} consultations. Your appointment is linked to your patient identity.</p>
       {message && <div className="banner ok" role="status">{message}</div>}
       {error && <div className="banner err" role="alert">{error}</div>}
       <form onSubmit={book}>
-        <div className="field">
+<div className="field">
           <label htmlFor="appointment-doctor">Choose doctor</label>
           <select id="appointment-doctor" value={doctorId} onChange={(e) => setDoctorId(e.target.value)} required>
             <option value="">Select a doctor</option>
             {doctors.map((doctor) => <option key={doctor.id || doctor.doctorId} value={doctor.code || doctor.doctorCode || doctor.id || doctor.doctorId}>{doctor.name || doctor.fullName} {doctor.specialization ? `· ${doctor.specialization}` : ''}</option>)}
           </select>
-          {doctors.length === 0 && <small className="muted">No matching doctor is currently listed. Check doctor registration and service availability.</small>}
+          {doctors.length === 0 && <small className="muted">No verified doctor is available for this AYUSH system yet. A doctor account must be approved before patients can book.</small>}
         </div>
         <div className="field">
           <label htmlFor="appointment-time">Date and time</label>

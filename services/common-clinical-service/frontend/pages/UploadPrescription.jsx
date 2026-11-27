@@ -21,7 +21,7 @@ export default function UploadPrescription() {
 
   if (!patient) return <Navigate to="/register" replace />;
 
-  const next = () => nav(`/ayurveda/consultations/${patient.consultationId}/prakriti-vikriti`);
+  const next = () => nav(`/siddha/consultations/${patient.consultationId}/mukkutram`);
 
   const addFiles = (list) => {
     let msg = '';

@@ -1,5 +1,4 @@
-// Idempotent shared demo seed for the combined Ayurveda + Yoga local deployment.
-// Both application packages use this same seed against the shared platform database.
+// Idempotent shared demo seed. Siddha demo doctor: 9000000003 (D-SID-1). The other AYUSH demo doctors are kept so a shared database stays compatible.
 const { db, uuid, now } = require('./context');
 
 module.exports = function seed() {
@@ -23,6 +22,8 @@ module.exports = function seed() {
   const services = [
     ['Ayurveda', 'Ayurveda consultation'],
     ['Yoga & Naturopathy', 'Yoga & Naturopathy consultation'],
+    ['Siddha', 'Siddha consultation'],
+    ['Unani', 'Unani consultation'],
   ];
   for (const [system, serviceName] of services) {
     if (!db.prepare('SELECT 1 FROM facility_services WHERE facility_id=? AND ayush_system=?').get(facility.facility_id, system)) {
@@ -80,6 +81,8 @@ module.exports = function seed() {
 
   ensureDoctor({ code: 'D-AYU-1', name: 'Dr. Ayurveda Demo', system: 'Ayurveda', mobile: '9000000001', email: 'ayurveda.demo@demo.in', registration: 'AYU-DEMO-001', council: 'NCISM', degree: 'BAMS' });
   ensureDoctor({ code: 'D-YOGA-1', name: 'Dr. Yoga Demo', system: 'Yoga & Naturopathy', mobile: '9000000002', email: 'yoga.demo@demo.in', registration: 'YOGA-DEMO-001', council: 'Yoga Council', degree: 'Yoga Therapy' });
+  ensureDoctor({ code: 'D-UNA-1', name: 'Dr. Unani Demo', system: 'Unani', mobile: '9000000004', email: 'unani.demo@demo.in', registration: 'UNA-DEMO-001', council: 'NCISM', degree: 'BUMS' });
+  ensureDoctor({ code: 'D-SID-1', name: 'Dr. Siddha Demo', system: 'Siddha', mobile: '9000000003', email: 'siddha.demo@demo.in', registration: 'SID-DEMO-001', council: 'NCISM', degree: 'BSMS' });
 
   // Create the demo admin/auditor only once; both apps share these accounts.
   if (db.prepare('SELECT COUNT(*) c FROM admin_profiles').get().c === 0) {

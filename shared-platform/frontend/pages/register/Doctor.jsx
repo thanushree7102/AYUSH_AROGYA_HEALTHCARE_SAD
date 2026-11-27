@@ -4,7 +4,7 @@ import { COUNCILS, STATES, SYSTEMS } from '../../constants/options';
 const fields = [
   { name: 'name', label: 'Full name (as on certificate)', required: true },
   { name: 'system', label: 'System of medicine', type: 'select', options: SYSTEMS, required: true },
-  { name: 'qualification', label: 'Degree (e.g. BAMS, MD Ayurveda)', required: true },
+  { name: 'qualification', label: 'Degree (e.g. BSMS, MD (Siddha))', required: true },
   { name: 'institution', label: 'College / institution' },
   { name: 'university', label: 'Awarding university' },
   { name: 'graduationYear', label: 'Graduation year', digits: 4, pattern: /^\d{4}$/, patternMsg: 'Enter a 4-digit year' },

@@ -3,16 +3,16 @@
 // The result is only a DRAFT: the patient checks it before anything is saved.
 const fs = require('fs');
 const path = require('path');
-const SYS = ['ayurveda'];
-const KW={ayurveda:/taila|tailam|avipattikar|triphala|ashwagandha|guggulu|trikatu|kashayam|kashaya|churna|vati\b|ghrita|bhasma|prakriti|vikriti|vata|pitta|kapha|panchakarma|arishta|asava|ayurved|vaidya|baidyanath|zandu|dabur|patanjali|आयुर्वेद|चूर्ण/g};
-const FIELDS={ayurveda:['Prakriti','Vikriti']};
-const MED=/(\btab(?:let)?s?\b|\bcap(?:sule)?s?\b|\bsyp\b|syrup|powder|tailam|taila\b|\btsp\b|kashayam|kashaya|churna|vati\b|ghrita|bhasma|\d+\s?(?:mg|ml|gm)\b)/i;
+const SYS = ['siddha'];
+const KW={siddha:/chooranam|churanam|kudineer|kudinir|mathirai|parpam|chenduram|chendooram|chunnam|legiyam|lehyam|manappagu|kuzhambu|thailam|ennai\b|nei\b|thokkanam|varmam|pathiyam|apathiyam|siddha|siddhar|envagai|naadi|nadi\b|mukkutram|mukkuttram|vatham|pitham|kabam|kapham|vali\b|azhal|iyam\b|thegi|thontham|noi\s+naadal|ul\s+marunthu|pura\s+maruthuvam/g};
+const FIELDS={siddha:['Udal Thegi','Mukkutram','Naadi']};
+const MED=/(\btab(?:let)?s?\b|\bcap(?:sule)?s?\b|\bsyp\b|syrup|powder|thailam|\btsp\b|kudineer|chooranam|mathirai|parpam|chenduram|chunnam|legiyam|manappagu|kuzhambu|\bnei\b|\bennai\b|\d+\s?(?:mg|ml|gm)\b)/i;
 const DOSE=/\d+(?:\.\d+)?\s?(?:mg|ml|gm|g|c|ch|cm|x|tsp|tbsp|tabs?|tablets?|caps?|capsules?|drops?)\b/i,FREQ=/\b(\d-\d-\d(?:-\d)?|od|bd|bid|tds|tid|qid|hs|twice daily|once daily|thrice daily|three times (?:a day|daily)|two times (?:a day|daily)|twice a day|once a day|at night|at bedtime|before food|after food)\b/i,DUR=/\d+\s*(?:days?|weeks?|wks?|months?|d)\b/i; // 7d, 7 days, 2 weeks
 const iso=s=>{const m=(s||'').match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);return m?`${m[3].length==2?'20'+m[3]:m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:''};
-// Ayurveda medicine details: formulation, Anupana and Kala
-const MEDF={ayurveda:['Form','Anupana','Kala']};
-const FORM=/(powder|kashayam|kashaya|kwath|churna|vati|vatika|gutika|ghrita|ghritam|tailam|taila|bhasma|arishta|asava|lehyam|leha)/i;
-const medExtra=l=>({Form:(l.match(FORM)||[''])[0],Anupana:(l.match(/(?:anupa?nam?a?|along with|with)\s*[:\-]?\s*(warm water|hot water|rose water|honey|milk|ghee|buttermilk|jaggery|water)/i)||[])[1]||'',
+// Siddha medicine details: dosage form (Marunthu vagai), Anupanam (vehicle) and Kaalam (timing)
+const MEDF={siddha:['Form','Anupana','Kala']};
+const FORM=/(chooranam|churanam|kudineer|kudinir|mathirai|parpam|chenduram|chendooram|chunnam|legiyam|lehyam|manappagu|kuzhambu|thailam|ennai|nei\b|powder|tablet)/i;
+const medExtra=l=>({Form:(l.match(FORM)||[''])[0],Anupana:(l.match(/(?:anupa?nam?a?|along with|with)\s*[:\-]?\s*(warm water|hot water|rose water|honey|thaen|milk|ghee|nei|buttermilk|jaggery|panai vellam|water)/i)||[])[1]||'',
   Kala:(l.match(/(before food|after food|empty stomach|at bedtime|after meals|before meals)/i)||[''])[0],Potency:(l.match(/\b(\d+\s?(?:c|ch|cm)|1m|10m|50m|lm\s?\d+|\d+x)\b/i)||[''])[0],
   Badal:(l.match(/(?:badal|substitute)\s*[:\-]?\s*([a-z ]{3,25})/i)||[])[1]||'',Repetition:(l.match(/(?:repeat|rep\.?)\s*[:\-]?\s*([^,\n]{2,30})/i)||[])[1]||''});
 // lab report lines like "Haemoglobin 11.2 g/dL (12-16)" -> {test, value, range}  (the basic reader's way of reading lab reports)
@@ -30,22 +30,18 @@ function section(text, label, stops) {
 }
 function extract(text) {
   let t = cleanOcrBlock(text);
-  // Small, context-bound corrections for frequent OCR confusions in the supplied sample format.
-  // Do not run a general medical spell-corrector: uncertain clinical text must remain reviewable.
-  t = t.replace(/\bAtzes\b/gi, 'Atees').replace(/\bAines(?=\s+powder)\b/gi, 'Atees')
-    .replace(/\bcald\b/gi, 'cold').replace(/\bwth\b/gi, 'with')
-    .replace(/\bagestive\b/gi, 'digestive').replace(/\bfeoblems\b/gi, 'problems')
-    .replace(/\brespitatary\b/gi, 'respiratory').replace(/\binfecnans\b/gi, 'infections');
+  // Only small, context-bound OCR corrections are applied; uncertain clinical text must remain reviewable.
+  t = t.replace(/\bcald\b/gi, 'cold').replace(/\bwth\b/gi, 'with').replace(/\bagestive\b/gi, 'digestive');
   const lc = t.toLowerCase();
   const pick = (r) => (t.match(r) || [])[1]?.trim() || '';
   const score = Object.fromEntries(SYS.map(s => [s, (lc.match(KW[s]) || []).length]));
   // Explicit document titles are stronger than keyword counts.
-  if (/ayurvedic\s+prescription/i.test(t)) score.ayurveda += 10;
-  const best = SYS.reduce((a, b) => score[b] > score[a] ? b : a, 'ayurveda');
+  if (/siddha\s+prescription/i.test(t)) score.siddha += 10;
+  const best = SYS.reduce((a, b) => score[b] > score[a] ? b : a, 'siddha');
   const system = score[best] ? best : '';
   const findings = {};
-  for (const f of FIELDS[system || 'ayurveda']) {
-    // Only accept an explicitly labelled field; never infer Prakriti from a stray OCR token.
+  for (const f of FIELDS[system || 'siddha']) {
+    // Only accept an explicitly labelled field; never infer Udal Thegi from a stray OCR token.
     findings[f] = pick(new RegExp('(?:^|\\n)\\s*' + f + '\\s*[:\\-]\\s*([^\\n,;.]+)', 'i'));
   }
   const complaint = section(t, '(?:reported\\s+sym\\w*|chief\\s+complaint|complaints?|symptoms|c\\/o)', [
@@ -77,7 +73,7 @@ function extract(text) {
     }
   }
   const advice = remedy.match(/\b(?:can be taken|to be taken|should be taken)\b[\s\S]*/i)?.[0]
-    || pick(/(?:advice|pathya|pathyam|ghiza|diet)\s*[:\-]?\s*([^\n.;|]+)/i);
+    || pick(/(?:advice|pathiyam|pathyam|diet)\s*[:\-]?\s*([^\n.;|]+)/i);
   const labs = labLines(t);
   return {
     system, results: labs, doc_type: labs.length >= 2 ? 'lab_report' : (/prescription/i.test(t) ? 'prescription' : ''),
@@ -87,7 +83,7 @@ function extract(text) {
     findings, medicines: meds
   };
 }
-const PROMPT=`You read Indian Ayurveda prescriptions, including handwriting and Hindi/Devanagari. Return ONLY one JSON object, no other text: {"transcription":"all text you can read","doc_type":"prescription, lab_report, discharge_summary or other","summary":"2-3 plain sentences a patient can understand: what this document is, the main diagnosis or findings, the medicines and the advice; say 'not clearly readable' for anything unclear","results":[{"test":"","value":"","range":""}],"system":"ayurveda, or empty string if this is not an Ayurveda document","doctor":"","date":"YYYY-MM-DD or empty","complaint":"","diagnosis":"","advice":"","allergies":"","findings":{"Prakriti":"","Vikriti":""},"medicines":[{"name":"","dose":"","freq":"","duration":"","extra":{"Form":"","Anupana":"","Kala":""}}]}. Translate Hindi to English. For lab reports fill "results" with up to 12 key test values (empty list otherwise). Use an empty string for anything not written. Never guess or invent.`;
+const PROMPT=`You read Indian Siddha prescriptions, including handwriting, Tamil and Hindi/Devanagari. Return ONLY one JSON object, no other text: {"transcription":"all text you can read","doc_type":"prescription, lab_report, discharge_summary or other","summary":"2-3 plain sentences a patient can understand: what this document is, the main diagnosis or findings, the medicines and the advice; say 'not clearly readable' for anything unclear","results":[{"test":"","value":"","range":""}],"system":"siddha, or empty string if this is not a Siddha document","doctor":"","date":"YYYY-MM-DD or empty","complaint":"","diagnosis":"","advice":"","allergies":"","findings":{"Udal Thegi":"","Mukkutram":"","Naadi":""},"medicines":[{"name":"","dose":"","freq":"","duration":"","extra":{"Form":"","Anupana":"","Kala":""}}]}. Translate Tamil and Hindi to English but keep Siddha medicine names (Chooranam, Mathirai, Kudineer, Parpam, Chenduram, Legiyam, Thailam) as written. For lab reports fill "results" with up to 12 key test values (empty list otherwise). Use an empty string for anything not written. Never guess or invent.`;
 async function visionRead(file,mime,text){const content=text?[{type:'text',text:PROMPT+'\n\nThe patient typed this description instead of sending a photo:\n'+text}]:[{type:mime==='application/pdf'?'document':'image',source:{type:'base64',media_type:mime,data:fs.readFileSync(file).toString('base64')}},{type:'text',text:PROMPT}]; // photos and PDF reports
   const r=await fetch((process.env.ANTHROPIC_BASE_URL||'https://api.anthropic.com')+'/v1/messages',{method:'POST',headers:{'x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:process.env.ANTHROPIC_MODEL||'claude-sonnet-5-5',max_tokens:3000,messages:[{role:'user',content}]})});
   if(!r.ok)throw new Error('vision API '+r.status);const t=(await r.json()).content.map(c=>c.text||'').join('');return JSON.parse(t.slice(t.indexOf('{'),t.lastIndexOf('}')+1))}
@@ -140,7 +136,7 @@ async function readInput({file,mime,text}){let raw=text||'',ex=null,why='';
   if(!ex.summary){ex.summary=makeSummary(ex);ex._sumAuto=true} // plain-language summary: written by the AI, or built from the fields found
   return {raw,ex}}
 
-const SYSL={ayurveda:'Ayurveda'};
+const SYSL={siddha:'Siddha'};
 function makeSummary(x){const L=[],j=a=>a.filter(Boolean).join(', '),kind=['lab_report','discharge_summary'].includes(x.doc_type)?x.doc_type.replace('_',' '):'record';
   const meds=(x.medicines||[]).filter(m=>m.name).map(m=>m.name+(j([m.dose,m.freq,m.duration])?' ('+j([m.dose,m.freq,m.duration])+')':'')),fd=Object.entries(x.findings||{}).filter(([,v])=>v).map(([k,v])=>k+': '+v).join(', ');
   const rs=(x.results||[]).filter(r=>r&&r.test).map(r=>{const v=parseFloat(r.value),g=(r.range||'').match(/(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)/),flag=g&&!isNaN(v)?(v<+g[1]?'low':v>+g[2]?'high':''):'',p=[flag,r.range&&'normal '+r.range].filter(Boolean); // low/high flag from the normal range printed on the report

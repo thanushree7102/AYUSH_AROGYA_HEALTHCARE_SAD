@@ -5,13 +5,18 @@ const HOST = process.env.SERVICE_HOST || '127.0.0.1';
 const BASE = Number(process.env.PORT_BASE || 5000);
 
 const SERVICES = {
-  gateway:      { offset: 0, title: 'API Gateway' },
-  platform:     { offset: 1, title: 'Shared Platform' },
-  ayurveda:     { offset: 2, title: 'Ayurveda Service' },
-  clinical:     { offset: 7, title: 'Common Clinical Service' },
-  longitudinal: { offset: 8, title: 'Longitudinal Record Service' },
-  integrations: { offset: 9, title: 'Integrations (OCR, voice and translation)' },
+  gateway:      { offset: 0,  title: 'API Gateway' },
+  platform:     { offset: 1,  title: 'Shared Platform' },
+  ayurveda:     { offset: 2,  title: 'Ayurveda Service' },
+  yoga:         { offset: 3,  title: 'Yoga & Naturopathy Service' },
+  unani:        { offset: 4,  title: 'Unani Service' },
+  siddha:       { offset: 5,  title: 'Siddha Service' },
+  homoeopathy:  { offset: 6,  title: 'Homoeopathy Service' },
+  clinical:     { offset: 7,  title: 'Common Clinical Service' },
+  longitudinal: { offset: 8,  title: 'Longitudinal Record Service' },
+  integrations: { offset: 9,  title: 'Integrations (OCR, voice, translate, notifications)' },
   bus:          { offset: 10, title: 'Event Bus' },
+  ai:           { offset: 11, title: 'AI Q&A Service' },
 };
 for (const [k, v] of Object.entries(SERVICES)) {
   const env = k.toUpperCase();
@@ -19,6 +24,10 @@ for (const [k, v] of Object.entries(SERVICES)) {
   v.port = Number(process.env[`${env}_PORT`] || BASE + v.offset);
   v.url = process.env[`${env}_URL`] || `http://${HOST}:${v.port}`;
 }
+
+// Services this deployment actually runs (health checks look only at these). The Siddha application runs the Siddha domain service plus the
+// shared platform services; set AYUSH_ACTIVE_SERVICES=a,b,c to change it.
+const ACTIVE_SERVICES = (process.env.AYUSH_ACTIVE_SERVICES || 'gateway,platform,siddha,clinical,longitudinal,integrations,bus,ai').split(',').map((x) => x.trim()).filter((x) => SERVICES[x]);
 
 // AYUSH domain key -> display name used in records, consents and the UI
 const SYSTEMS = { ayurveda: 'Ayurveda', yoga: 'Yoga & Naturopathy', unani: 'Unani', siddha: 'Siddha', homoeopathy: 'Homoeopathy' };
@@ -36,8 +45,9 @@ const EVENTS = {
   CONSENT_WITHDRAWN: 'consent.withdrawn',
   ENCOUNTER_CREATED: 'encounter.created',
   RECORD_CREATED: 'clinical.record.created',
+  PRESCRIPTION_UPDATED: 'clinical.prescription.updated',
   ASSESSMENT_SAVED: 'clinical.assessment.saved',
   PRACTITIONER_DECIDED: 'admin.decision.made',
 };
 
-module.exports = { HOST, SERVICES, SYSTEMS, SYSTEM_NAMES, DOMAIN_KEYS, ROLE_OF, ACCOUNT_TYPE, EVENTS };
+module.exports = { HOST, SERVICES, ACTIVE_SERVICES, SYSTEMS, SYSTEM_NAMES, DOMAIN_KEYS, ROLE_OF, ACCOUNT_TYPE, EVENTS };

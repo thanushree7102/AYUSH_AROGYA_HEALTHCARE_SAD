@@ -8,16 +8,14 @@ const crypto = require('crypto');
 const sec = require('../../libs/common/security');
 
 const TTL_MS = 5 * 60 * 1000;
-// Local demo: no OTP send cooldown or per-hour request cap.
- // Keep this configuration for local classroom testing only. Production must use
- // provider-side throttling, per-IP/per-account rate limits and abuse monitoring.
-const COOLDOWN_MS = 0;
-const MAX_SENDS_PER_HOUR = Infinity;
+const COOLDOWN_MS = 30 * 1000;
+const MAX_SENDS_PER_HOUR = 6;
 const MAX_TRIES = 5;
 const PROOF_MS = 10 * 60 * 1000;
 const FIXED = String(process.env.OTP_CODE || '').trim();
 
 const codes = new Map();   // mobile -> { hash, exp, tries, sentAt }
+const sends = new Map();   // mobile -> [timestamps]
 const proofs = new Map();  // mobile -> expiry
 
 const same = (a, b) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -27,8 +25,14 @@ const sweep = () => { const t = Date.now(); for (const [k, v] of codes) if (v.ex
 function issue(mobile) {
   sweep();
   const t = Date.now();
-  // No request-count or resend-cooldown check in local demo mode.
-  // Each new request replaces the previous code; only the newest code is valid.
+  const prev = codes.get(mobile);
+  if (prev && t - prev.sentAt < COOLDOWN_MS) {
+    const wait = Math.ceil((COOLDOWN_MS - (t - prev.sentAt)) / 1000);
+    return { ok: false, wait, message: `Please wait ${wait} seconds before asking for a new OTP.` };
+  }
+  const recent = (sends.get(mobile) || []).filter((x) => t - x < 3600000);
+  if (recent.length >= MAX_SENDS_PER_HOUR) return { ok: false, wait: 600, message: 'Too many OTP requests. Try again in a while.' };
+  recent.push(t); sends.set(mobile, recent);
   const code = FIXED || String(crypto.randomInt(0, 1000000)).padStart(6, '0');
   codes.set(mobile, { hash: sec.hmac(`${mobile}:${code}`), exp: t + TTL_MS, tries: 0, sentAt: t });
   return { ok: true, code, expiresIn: TTL_MS / 1000, resendIn: COOLDOWN_MS / 1000 };

@@ -3,6 +3,8 @@ import { platform } from '../../api/client';
 import Field from '../../components/Field';
 import { getSession } from '../../utils/session';
 import { formatIST } from '../../utils/time';
+import CommonClinical from '@clinical/components/CommonClinical';
+import VisitHistory from '@longitudinal/pages/patient/VisitHistory';
 
 const historyFields = [
   { name: 'conditionName', label: 'Condition (e.g. Diabetes)' },
@@ -73,6 +75,8 @@ export default function Profile() {
           </>
         )}
       </div>
+      <VisitHistory />
+      <CommonClinical healthId={s.healthId} view="prescriptions" />
       <Section title="Add medical history" fields={historyFields} endpoint="medical-history" onSaved={load} />
       {p?.medicalHistory.length > 0 && (
         <div className="card"><h3>Medical history on file</h3>

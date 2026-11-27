@@ -9,10 +9,11 @@ export default function TopBar() {
   const s = getSession();
   return (
     <header className="topbar">
-      <div className="brand"><Link to="/" style={{ color: 'inherit', textDecoration: 'none' }}>🌿 {t('AYUSH Health Record')}</Link></div>
+      <div className="brand"><Link to="/" style={{ color: 'inherit', textDecoration: 'none' }}>🌿 {t('AYUSH Siddha Health Record')}</Link></div>
       <div className="who">
         <LangSwitch />
         <Link to="/assistant" className="toplink">🗣️ {t('Speak & translate')}</Link>
+        <Link to="/ai-assistant" className="toplink">🤖 {t('AI Q&A')}</Link>
         {s && (
           <>
             <Link to="/me" className="toplink">{s.name}{s.healthId ? ` · ${s.healthId}` : ''}</Link>

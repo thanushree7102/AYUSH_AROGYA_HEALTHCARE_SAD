@@ -27,11 +27,11 @@ export default function Privacy() {
   return (
     <div className="card">
       <h3>Who can see my record</h3>
-      <p className="muted">Only the doctors you select can open your connected Ayurveda and Yoga records. You can change this at any time.</p>
+      <p className="muted">Only the doctors you select can access the AYUSH records you authorize, including Siddha and the other AYUSH systems. You can withdraw sharing at any time.</p>
       {status.state === 'error' && <div className="banner err">{status.message}</div>}
       {status.state === 'saved' && <div className="banner ok">Sharing settings saved.</div>}
       <div className="field"><label>Connected records</label>
-        <p className="muted">Selected doctors can access Ayurveda and Yoga &amp; Naturopathy records.</p></div>
+        <p className="muted">Selected doctors can access the AYUSH systems covered by your consent.</p></div>
       <div className="field"><label htmlFor="days">For how long?</label>
         <select id="days" value={days} onChange={(e) => setDays(e.target.value)}><option value="">Until I stop sharing</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">1 year</option></select></div>
       <div className="field"><label>Choose doctors</label>

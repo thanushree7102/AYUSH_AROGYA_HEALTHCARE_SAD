@@ -39,6 +39,6 @@ function make(baseURL) {
 }
 
 // Same origin by default (Vite proxy in dev, the gateway serves the build in production). Set VITE_API_URL to point elsewhere.
-export default make(import.meta.env.VITE_API_URL || '/v1/ayurveda'); // Ayurveda service
+export default make(import.meta.env.VITE_API_URL || '/v1/siddha'); // Siddha service
 export const platform = make(import.meta.env.VITE_PLATFORM_URL || '/v1'); // gateway: auth, records, consent, timeline
-export const forSystem = (key) => (key === 'ayurveda' ? make(import.meta.env.VITE_API_URL || '/v1/ayurveda') : make(`/v1/${key}`)); // one AYUSH service
+export const forSystem = (key) => (key === 'siddha' ? make(import.meta.env.VITE_API_URL || '/v1/siddha') : make(`/v1/${key}`)); // one AYUSH service

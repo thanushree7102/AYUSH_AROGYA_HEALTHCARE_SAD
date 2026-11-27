@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { platform } from '@shared/api/client';
-import { PRAKRITI_OPTIONS } from '@shared/constants/options';
 import { getSession } from '@shared/utils/session';
 
 const TYPES = ["Doctor's prescription", 'Medicine photo', 'Lab report'];
-const SYSTEMS = ['Ayurveda'];
+const APP_SYSTEM = 'Siddha';
 const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png'];
 const MAX_MB = 5;
 const blankMed = { name: '', dose: '', timing: '', duration: '' };
@@ -13,7 +12,7 @@ const blankMed = { name: '', dose: '', timing: '', duration: '' };
 export default function AddRecord() {
   const nav = useNavigate();
   const [searchParams] = useSearchParams();
-  const requestedSystem = searchParams.get('system') || '';
+  const requestedSystem = APP_SYSTEM;
   const s = getSession();
   const [stage, setStage] = useState('pick'); // pick | review | saved
   const [type, setType] = useState(TYPES[0]);
@@ -50,7 +49,7 @@ export default function AddRecord() {
       const r = await platform.post('/records/extract', fd, { timeout: 90000 });
       const d = r.data;
       setDraft({
-        system: requestedSystem || d.system || '', problem: d.problem || '', diagnosis: d.diagnosis || '', prakriti: d.prakriti || '',
+        system: APP_SYSTEM, problem: d.problem || '', diagnosis: d.diagnosis || '', domainAssessment: '', treatmentPlan: '',
         medicines: d.medicines?.length ? d.medicines : [{ ...blankMed }], advice: d.advice || '',
         readWithAi: !!d.readWithAi, note: d.note || '',
       });
@@ -66,7 +65,7 @@ export default function AddRecord() {
   const save = async () => {
     const hasMed = draft.medicines.some((m) => m.name.trim());
     if (!draft.system) { setError('Please select the AYUSH system. If it is not identified, choose the correct system manually.'); return; }
-    if (!draft.problem.trim() && !draft.diagnosis.trim() && !hasMed) {
+    if (!draft.problem.trim() && !draft.diagnosis.trim() && !hasMed && !draft.domainAssessment.trim() && !draft.treatmentPlan.trim()) {
       setError('Nothing was found in the file. Add at least a problem or a medicine, or try a clearer photo.');
       return;
     }
@@ -77,10 +76,10 @@ export default function AddRecord() {
       const fd = new FormData();
       fd.append('file', file);
       fd.append('documentType', type);
-      await platform.post(`/patients/${encodeURIComponent(s.healthId)}/prescriptions`, fd, { timeout: 90000 });
+      const up = await platform.post(`/patients/${encodeURIComponent(s.healthId)}/prescriptions`, fd, { timeout: 90000 });
 
       const { note, readWithAi, ...rest } = draft;
-      await platform.post('/records', { healthId: s.healthId, documentType: type, fileName: file.name, ...rest, medicines: draft.medicines.filter((m) => m.name.trim()) });
+      await platform.post('/records', { healthId: s.healthId, documentType: type, fileName: file.name, uploadId: up.data?.uploadId, ...rest, system: APP_SYSTEM, prakriti: '', advice: [draft.advice, draft.domainAssessment ? `${APP_SYSTEM} assessment: ${draft.domainAssessment}` : '', draft.treatmentPlan ? `${APP_SYSTEM} treatment plan: ${draft.treatmentPlan}` : ''].filter(Boolean).join('\n\n'), medicines: draft.medicines.filter((m) => m.name.trim()) });
       setStage('saved');
     } catch (err) {
       const message = err.response?.data?.message;
@@ -110,14 +109,13 @@ export default function AddRecord() {
         {!draft.readWithAi && <div className="banner info">{draft.note || 'Read without AI. Handwriting is read better with the AI reader switched on.'}</div>}
         {error && <div className="banner err">{error}</div>}
 
-        <div className="field"><label>Which AYUSH system is this from?</label>
-          <select value={draft.system} onChange={(e) => setD('system', e.target.value)}><option value="">Select AYUSH system</option>{SYSTEMS.map((x) => <option key={x}>{x}</option>)}</select></div>
-        <div className="field"><label>Problem</label><textarea rows={2} value={draft.problem} onChange={(e) => setD('problem', e.target.value)} /></div>
-        <div className="field"><label>Diagnosis</label><input value={draft.diagnosis} onChange={(e) => setD('diagnosis', e.target.value)} /></div>
-        <div className="field"><label>Prakriti</label>
-          <select value={draft.prakriti} onChange={(e) => setD('prakriti', e.target.value)}><option value="">Not mentioned</option>{PRAKRITI_OPTIONS.map((x) => <option key={x}>{x}</option>)}</select></div>
+        <div className="banner info">This record belongs to <strong>Siddha</strong>. It will be saved only under your Siddha health record.</div>
+        <div className="field"><label>Chief complaint (Noi / symptoms)</label><textarea rows={2} value={draft.problem} onChange={(e) => setD('problem', e.target.value)} /></div>
+        <div className="field"><label>Siddha diagnosis (Noi Naadal)</label><input value={draft.diagnosis} onChange={(e) => setD('diagnosis', e.target.value)} /></div>
+        <div className="field"><label>Envagai Thervu (eight-fold examination)</label><textarea rows={2} value={draft.domainAssessment} onChange={(e) => setD('domainAssessment', e.target.value)} placeholder="Naadi, Sparisam, Naa, Niram, Mozhi, Vizhi, Malam and Moothiram findings" /></div>
+        <div className="field"><label>Mukkutram / Udal Thathukkal</label><textarea rows={2} value={draft.treatmentPlan} onChange={(e) => setD('treatmentPlan', e.target.value)} placeholder="Vatham, Pitham, Kabam; seven tissue observations and clinical notes" /></div>
 
-        <label className="lbl">Medicines</label>
+        <label className="lbl">Siddha internal medicines (Ul Marunthu)</label>
         {draft.medicines.map((m, i) => (
           <div className="medrow" key={i}>
             <input placeholder="Medicine" value={m.name} onChange={(e) => setMed(i, 'name', e.target.value)} />
@@ -129,7 +127,7 @@ export default function AddRecord() {
         ))}
         <button type="button" className="secondary" onClick={() => setD('medicines', [...draft.medicines, { ...blankMed }])}>Add medicine</button>
 
-        <div className="field" style={{ marginTop: 14 }}><label>Advice</label><textarea rows={2} value={draft.advice} onChange={(e) => setD('advice', e.target.value)} /></div>
+        <div className="field" style={{ marginTop: 14 }}><label>Pathiyam (diet and conduct) / advice</label><textarea rows={2} value={draft.advice} onChange={(e) => setD('advice', e.target.value)} /></div>
         <button type="button" disabled={busy} onClick={save}>{busy ? 'Saving...' : 'Save to my record'}</button>{' '}
         <button type="button" className="secondary" onClick={again}>Start again</button>
       </div>

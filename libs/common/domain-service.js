@@ -1,4 +1,4 @@
-// Builds the Ayurveda domain service.
+// Builds one AYUSH domain service (Ayurveda, Yoga & Naturopathy, Unani, Siddha, Homoeopathy).
 // This file is only the HTTP / storage / consent PLUMBING. Each service's server.js supplies its OWN clinical
 // content (parts + fields) and runs with its OWN database; nothing is shared between domains at run time.
 //   GET  /forms                              form definitions of this system (the UI renders from them)

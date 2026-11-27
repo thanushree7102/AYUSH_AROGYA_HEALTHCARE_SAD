@@ -14,17 +14,14 @@ const express = require('express');
 const cors = require('cors');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const security = require('../../libs/common/security');
-const { SERVICES, HOST } = require('../../libs/common/config');
+const { SERVICES, ACTIVE_SERVICES, HOST } = require('../../libs/common/config');
 const { platform } = require('../../libs/common/internal');
 
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 'loopback');
 app.use(cors({
-  origin: [...new Set([
-    'http://localhost:5171', 'http://127.0.0.1:5171',
-    ...(process.env.CORS_ORIGIN || '').split(',').filter(Boolean),
-  ])],
+  origin: (process.env.CORS_ORIGIN || 'http://localhost:5173,http://127.0.0.1:5173').split(','),
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Correlation-Id', 'Idempotency-Key', 'X-Face-Token'],
   exposedHeaders: ['X-Request-Id'],
@@ -62,16 +59,19 @@ add(['GET'], /^\/facilities\/[^/]+\/practitioners$/, 'platform', 'user');
 add(ANY, /^\/patients\/[^/]+\/(profile|medical-history|health-concerns|consents)$/, 'platform', 'user');
 add(ANY, /^\/admin\/.*$/, 'platform', 'user');
 // Longitudinal record (timeline + consent-aware patient summary)
-add(['GET'], /^\/patients\/[^/]+\/(summary|timeline)$/, 'longitudinal', 'user');
+add(['GET'], /^\/patients\/[^/]+\/(summary|timeline|visit-history)$/, 'longitudinal', 'user');
 add(ANY, /^\/longitudinal(\/.*)?$/, 'longitudinal', 'user', (p) => p.replace(/^\/longitudinal/, '') || '/');
 // Common clinical service
 add(ANY, /^\/records(\/.*)?$/, 'clinical', 'user');
 add(ANY, /^\/patients\/[^/]+\/(prescriptions|uploads|records)$/, 'clinical', 'user');
-add(ANY, /^\/uploads\/\d+\/file$/, 'clinical', 'user');
 add(ANY, /^\/clinical(\/.*)?$/, 'clinical', 'user', (p) => p.replace(/^\/clinical/, '') || '/');
 // AYUSH domain services
-add(ANY, /^\/ayurveda(\/.*)?$/, 'ayurveda', 'user', (p) => p.replace(/^\/ayurveda/, '') || '/');
-add(ANY, /^\/consultations\/.*$/, 'ayurveda', 'user'); // older frontend calls /v1/consultations/... directly
+for (const k of ['ayurveda', 'yoga', 'unani', 'siddha', 'homoeopathy']) add(ANY, new RegExp(`^/${k}(/.*)?$`), k, 'user', (p) => p.replace(new RegExp(`^/${k}`), '') || '/');
+add(ANY, /^\/consultations\/.*$/, 'siddha', 'user'); // older frontend calls /v1/consultations/... directly
+// AI Q&A Service
+add(['GET'], /^\/ai\/qa\/suggestions$/, 'ai', 'public', (p) => p.replace(/^\/ai/, '') || '/');
+add(['POST'], /^\/ai\/qa\/ask$/, 'ai', 'public', (p) => p.replace(/^\/ai/, '') || '/');
+add(['POST'], /^\/ai\/qa\/feedback$/, 'ai', 'public', (p) => p.replace(/^\/ai/, '') || '/');
 // Integrations
 add(['POST'], /^\/translate$/, 'integrations', 'user');
 add(['POST'], /^\/voice\/transcribe$/, 'integrations', 'user');
@@ -108,12 +108,13 @@ async function identify(req) {
 app.get('/health', (req, res) => res.json({ service: 'gateway', title: SERVICES.gateway.title, ok: true, time: new Date().toISOString() }));
 app.get(['/v1/health', '/api/health'], async (req, res) => { // every service in one call
   const out = {};
-  await Promise.all(Object.values(SERVICES).map(async (s) => {
+  await Promise.all(ACTIVE_SERVICES.map((k) => SERVICES[k]).map(async (s) => {
     try { const r = await fetch(`${s.url}/health`, { signal: AbortSignal.timeout(2500) }); out[s.name] = { ok: r.ok, port: s.port, title: s.title }; }
     catch (e) { out[s.name] = { ok: false, port: s.port, title: s.title }; }
   }));
   res.json({ ok: Object.values(out).every((x) => x.ok), services: out });
 });
+
 
 app.use(async (req, res, next) => {
   const m = req.path.match(/^\/(?:v1|api)(\/.*)?$/);

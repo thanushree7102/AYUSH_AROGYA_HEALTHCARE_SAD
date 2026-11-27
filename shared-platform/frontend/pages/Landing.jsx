@@ -78,8 +78,8 @@ export default function Landing() {
 
   return (
     <><TopBar /><div className="container"><div className="card">
-      <h2>{t('Your Ayurveda health history, in one place')}</h2>
-      <p className="muted">{t('Ayurveda consultations, assessments, diagnosis and therapy records.')}</p>
+      <h2>{t('Your Siddha health history, in one place')}</h2>
+      <p className="muted">{t('Siddha consultations, treatments and health records in one place.')}</p>
       <div className="field"><label>{t('Sign in as')}</label>
         <div className="seg">{ROLES.map(([k, l]) => (
           <button key={k} type="button" className={role === k ? 'on' : ''} onClick={() => { setRole(k); setMsg(''); setAddFace(null); }}>{t(l)}</button>))}</div></div>

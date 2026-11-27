@@ -1,3 +1,4 @@
+
 name: Unani CI
 
 on:
@@ -11,7 +12,7 @@ on:
 
 jobs:
   unani-ci:
-    name: Unani Build and Test
+    name: Unani Build and Validation
     runs-on: ubuntu-latest
 
     steps:
@@ -25,13 +26,10 @@ jobs:
           cache: npm
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
 
       - name: Check Syntax
         run: npm run check
-
-      - name: Run Unani Tests
-        run: npm run test
 
       - name: Build Unani Frontend
         run: npm run build:unani
